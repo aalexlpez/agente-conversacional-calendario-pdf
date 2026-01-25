@@ -16,8 +16,10 @@ from src.domain.exceptions import (
 	ResourceNotFound,
 	UserNotFound,
 )
+from src.domain.interfaces import LLM
 from src.infrastructure.auth import AuthService
 from src.infrastructure.memory_store import InMemoryStore
+from src.application.prompt_utils import build_document_query_prompt
 from src.tools.google_calendar_tool import GoogleCalendarTool
 from src.tools.pdf_tool import PDFTool
 
@@ -93,9 +95,10 @@ class ConversationUseCase:
 class DocumentUseCase:
 	"""Casos de uso para documentos PDF."""
 
-	def __init__(self, *, store: InMemoryStore, pdf_tool: PDFTool) -> None:
+	def __init__(self, *, store: InMemoryStore, pdf_tool: PDFTool, llm: Optional[LLM] = None) -> None:
 		self._store = store
 		self._pdf_tool = pdf_tool
+		self._llm = llm
 
 	async def upload(self, *, user_id: str, conversation_id: str, filename: str, content: bytes) -> Document:
 		conversation = self._store.get_conversation(conversation_id)
@@ -147,7 +150,20 @@ class DocumentUseCase:
 			or document.conversation_id != conversation_id
 		):
 			raise ResourceNotFound("Documento no encontrado")
-		return await self._pdf_tool.execute(f"search:{document_id}:{keyword}")
+		if not self._llm:
+			return await self._pdf_tool.execute(f"search:{document_id}:{keyword}")
+		content = (document.content or "").strip()
+		if not content:
+			return (
+				"No se pudo extraer texto legible del PDF. "
+				"Si es un PDF escaneado, sube una versión con OCR."
+			)
+		prompt = build_document_query_prompt(
+			filename=document.filename or "documento",
+			content=content,
+			question=keyword,
+		)
+		return await self._llm.generate(prompt)
 
 
 class EventUseCase:

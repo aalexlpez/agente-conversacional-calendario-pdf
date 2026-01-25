@@ -57,7 +57,7 @@ _auth_login_use_case = AuthLoginUseCase(
 	token_factory=create_access_token,
 )
 _conversation_use_case = ConversationUseCase(store=_store)
-_document_use_case = DocumentUseCase(store=_store, pdf_tool=_pdf_tool)
+_document_use_case = DocumentUseCase(store=_store, pdf_tool=_pdf_tool, llm=_llm_service)
 _event_use_case = EventUseCase(calendar_tool=_calendar_tool)
 
 create_conversation_use_case = CreateConversationUseCase(

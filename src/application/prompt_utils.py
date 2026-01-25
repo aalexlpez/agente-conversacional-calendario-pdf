@@ -155,3 +155,23 @@ def build_pdf_focus_context(
 		content_length=len(content),
 	)
 	return f"Documento: {selected.filename}\n{content}"
+
+
+def build_document_query_prompt(
+	*,
+	filename: str,
+	content: str,
+	question: str,
+	max_chars: int = 4000,
+) -> str:
+	cleaned = _sanitize_pdf_text(content or "")
+	if len(cleaned) > max_chars:
+		cleaned = cleaned[:max_chars] + "..."
+	return (
+		"Responde la pregunta usando únicamente el contenido del documento. "
+		"Si la información no está en el documento, responde: "
+		"'No se encontró información en el documento.'\n\n"
+		f"Documento: {filename}\n"
+		f"Contenido:\n{cleaned}\n\n"
+		f"Pregunta: {question}"
+	)
