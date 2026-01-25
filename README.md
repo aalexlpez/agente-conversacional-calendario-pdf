@@ -2,6 +2,41 @@
 
 Este repositorio implementa un agente conversacional en Python capaz de gestionar eventos de calendario, mantener conversaciones contextuales y responder preguntas sobre documentos PDF. El diseño sigue principios SOLID, utiliza asincronía y es fácilmente extensible mediante un sistema de plugins para herramientas externas.
 
+## Índice
+
+- [Guía paso a paso](#guía-paso-a-paso)
+- [Características principales](#características-principales)
+- [Instalación](#instalación)
+- [Ejecución](#ejecución)
+- [Proveedores de LLM soportados](#proveedores-de-llm-soportados)
+- [Persistencia](#persistencia)
+- [Herramientas externas y extensibilidad](#herramientas-externas-y-extensibilidad)
+- [Endpoints principales](#endpoints-principales)
+- [Pruebas](#pruebas)
+- [Notas y anotaciones extra (ejecución sencilla)](#notas-y-anotaciones-extra-ejecución-sencilla)
+- [Estructura del proyecto](#estructura-del-proyecto)
+- [PDF: subida y consultas (con memoria)](#pdf-subida-y-consultas-con-memoria)
+- [Instrucciones ejemplo para agente de calendario](#instrucciones-ejemplo-para-agente-de-calendario)
+- [Extensión por herramientas externas (plugins)](#extensión-por-herramientas-externas-plugins)
+- [Ejemplos rápidos (para un cliente como postman, swagger o cualquiera)](#ejemplos-rápidos-para-un-cliente-como-postman-swagger-o-cualquiera)
+- [Despliegue en Railway (Docker)](#despliegue-en-railway-docker)
+- [Usuarios y contraseñas para la obtención de tokens](#usuarios-y-contraseñas-de-ejemplo)
+
+## Guía paso a paso
+
+### 1) Levantar la aplicación en local
+Sigue en orden las secciones **Instalación** y **Ejecución**. Al final, abre la documentación interactiva en:
+
+- http://localhost:8000/docs
+
+### 2) Probar la aplicación en Render
+Si prefieres probar directamente en el entorno desplegado, usa la documentación interactiva aquí:
+
+- https://agente-conversacional-calendario-pdf.onrender.com/docs
+
+### 3) Probar funcionalidades
+Puedes usar los ejemplos de la sección **Ejemplos rápidos** o las rutas descritas en **Endpoints principales** y **PDF: subida y consultas (con memoria)**.
+
 ## Características principales
 
 - **Autenticación de usuarios** (simulada con almacén local)
@@ -287,3 +322,23 @@ Puedes desplegar este agente en Railway usando el Dockerfile incluido. Railway p
 ```
 
 > **Nota:** Si usas Google Calendar o LLM externos, asegúrate de subir los archivos de credenciales y configurar las variables de entorno necesarias en Railway.
+
+## Usuarios y contraseñas de ejemplo
+
+La autenticación está basada en un almacén local en memoria. Puedes iniciar sesión con cualquiera de los siguientes usuarios y contraseñas por defecto:
+
+| Usuario  | Contraseña |
+|----------|------------|
+| admin    | admin123   |
+| user1    | pass1      |
+| user2    | pass2      |
+| user3    | pass3      |
+| user4    | pass4      |
+| user5    | pass5      |
+| user6    | pass6      |
+| user7    | pass7      |
+| user8    | pass8      |
+| user9    | pass9      |
+| user10   | pass10     |
+
+Puedes modificar estos valores en el archivo `src/infrastructure/auth.py` si necesitas otros usuarios.
