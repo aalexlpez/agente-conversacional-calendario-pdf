@@ -158,7 +158,8 @@ La funcionalidad de PDFs ya está implementada mediante un endpoint de subida y 
 </p>
 
 
-> Los endpoints de eventos <b>no van a funcionar</b>, ya que actualmente la integración con Google Calendar utiliza mi acceso personal de Google Cloud Platform. En un entorno real, cada usuario debería autenticar su propia cuenta de Google y autorizar el acceso a su calendario personal para gestionar sus eventos de forma independiente.
+> Los endpoints de eventos <b>no van a funcionar</b>, ya que actualmente la integración con Google Calendar utiliza mi acceso personal de Google Cloud Platform. En un entorno real, cada usuario debería autenticar su propia cuenta de Google y autorizar el acceso a su calendario personal para gestionar sus eventos de forma independiente. 
+> He dejado dos imagenes en la ruta raíz para apreciar interacciones que he tenido en mi google calendar. En la imagen 1, van a ver una interacción con el LLM a través de postman para organizar reuniones. En la imagen 2, van a ver mi google calendar con los eventos organizados.
 
 <b>Agregar evento:</b>
 
