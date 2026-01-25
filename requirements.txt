@@ -1,0 +1,16 @@
+# Dependencias del proyecto
+pydantic
+python-dotenv
+pytest
+fastapi
+pdfminer.six
+uvicorn
+python-jose[cryptography]
+python-multipart
+httpx
+pytest-asyncio
+openai
+structlog
+google-api-python-client
+google-auth
+tzdata

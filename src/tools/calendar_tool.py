@@ -1,0 +1,1 @@
+"""CalendarTool eliminado: usar GoogleCalendarTool."""

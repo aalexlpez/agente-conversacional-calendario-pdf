@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+
+# Entornos virtuales
+venv/
+.env/
+.venv/
+ENV/
+
+# Archivos de entorno y secretos
+.env
+client_secret.json
+*.key
+*.pem
+
+# Archivos de configuración de IDE
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Archivos temporales y de sistema
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
+
+# Cachés y test
+.pytest_cache/
+.cache/
+
+# Salidas de build
+build/
+dist/
+*.egg-info/
+
+# Otros
+*.sqlite3
+*.db
+
+# Node (por si hay frontends)
+node_modules/
