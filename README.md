@@ -34,6 +34,8 @@ Si prefieres probar directamente en el entorno desplegado, usa la documentación
 
 - https://agente-conversacional-calendario-pdf.onrender.com/docs
 
+NOTA: Es probable que las primeras peticiones fallen o tarden debido al servidio de Render.com, que activa el servidor al recibir las peticiones.
+
 ### 3) Probar funcionalidades
 Puedes usar los ejemplos de la sección **Ejemplos rápidos** o las rutas descritas en **Endpoints principales** y **PDF: subida y consultas (con memoria)**.
 

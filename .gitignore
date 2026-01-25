@@ -44,3 +44,5 @@ dist/
 
 # Node (por si hay frontends)
 node_modules/
+
+ACTIVIDADES_SISTEMA_IA.md
