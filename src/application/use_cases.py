@@ -26,24 +26,29 @@ logger = structlog.get_logger()
 
 @dataclass
 class UseCaseConfig:
+	"""Configuración opcional de parámetros compartidos entre casos de uso."""
 	max_history_messages: int = 10
 	notify_on_complete: bool = True
 
 
 class CreateConversationUseCase:
+	"""Caso de uso para crear conversaciones nuevas y mantener la consistencia."""
 	def __init__(self, *, store: InMemoryStore, conversation_manager: ConversationManager) -> None:
 		self._store = store
 		self._conversation_manager = conversation_manager
 
 	def execute(self, *, user_id: str, title: Optional[str] = None) -> Conversation:
+		"""Delegar la creación al ConversationManager y devolver la conversación creada."""
 		return self._conversation_manager.create_conversation(user_id=user_id, title=title)
 
 
 class GetConversationHistoryUseCase:
+	"""Caso de uso para consultar el historial de mensajes de una conversación."""
 	def __init__(self, *, store: InMemoryStore) -> None:
 		self._store = store
 
 	def execute(self, *, conversation_id: str, limit: Optional[int] = None) -> List[Message]:
+		"""Devuelve los últimos mensajes de la conversación, con límite opcional."""
 		messages = self._store.list_messages_by_conversation(conversation_id)
 		return messages[-limit:] if limit else messages
 
@@ -53,7 +58,7 @@ class GetConversationHistoryUseCase:
 # Es asíncrona porque puede involucrar operaciones de red (LLM, herramientas externas)
 # y debe permitir streaming de respuestas y concurrencia sin bloquear el event loop.
 class SendMessageUseCase:
-	"""Flujo completo: contexto, LLM, tools y persistencia (async/await everywhere)."""
+	"""Orquesta el flujo de mensajes del agente con streaming y herramientas externas."""
 
 	def __init__(
 		self,
@@ -63,7 +68,8 @@ class SendMessageUseCase:
 		tool_registry: ToolRegistry,
 		conversation_manager: ConversationManager,
 		config: Optional[UseCaseConfig] = None,
-	) -> None:
+		) -> None:
+		"""Construye el caso de uso con dependencias inyectadas y configuración opcional."""
 		self._store = store
 		self._llm = llm
 		self._tool_registry = tool_registry
@@ -192,6 +198,7 @@ class SendMessageUseCase:
 			yield "\n[Respuesta finalizada]"
 
 	def _resolve_conversation(self, *, user_id: str, conversation_id: Optional[str]) -> Conversation:
+		"""Identifica o crea la conversación que se debe usar para el mensaje."""
 		if conversation_id:
 			conversation = self._store.get_conversation(conversation_id)
 			if conversation:
@@ -206,6 +213,7 @@ class SendMessageUseCase:
 
 	# Persistencia asíncrona del mensaje del asistente (por consistencia y para futuras extensiones I/O).
 	async def _persist_assistant_message(self, conversation_id: str, content: str) -> None:
+		"""Guarda mensajes generados por el asistente en memoria."""
 		assistant_message = Message(
 			id=f"msg_{len(self._store.messages) + 1}",
 			conversation_id=conversation_id,
@@ -216,6 +224,7 @@ class SendMessageUseCase:
 
 	# Llamada asíncrona a herramientas externas (pueden ser I/O o APIs de terceros).
 	async def _maybe_call_tool(self, user_text: str) -> Optional[str]:
+		"""Invoca herramientas externas cuando el usuario lo solicita mediante el prefijo tool:."""
 		match = re.match(r"^tool:(?P<name>[a-zA-Z0-9_\-]+)\s*[: ]\s*(?P<query>.+)$", user_text)
 		if not match:
 			return None

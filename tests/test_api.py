@@ -1,10 +1,9 @@
+"""Integración de los endpoints de autenticación con el ASGI app."""
+
 import pytest
 import httpx
 
 from src.api.main import app
-
-# Pruebas de integración para los endpoints HTTP de autenticación.
-# Se ejecutan en memoria usando el ASGI app, evitando depender de un servidor externo.
 
 
 @pytest.mark.asyncio

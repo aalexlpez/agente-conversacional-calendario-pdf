@@ -16,6 +16,7 @@ def build_message_payload(
 	conversation_id: str,
 	max_history_messages: int,
 ) -> List[Dict[str, str]]:
+	"""Construye el historial que se enviará al LLM, limitando mensajes recientes."""
 	messages = store.list_messages_by_conversation(conversation_id)
 	recent = messages[-max_history_messages:]
 	return [{"role": msg.role, "content": msg.content} for msg in recent]
@@ -28,7 +29,7 @@ def build_system_prompt(
 	conversation_id: str,
 	pdf_focus_context: Optional[str] = None,
 ) -> str:
-	# Contexto de usuario y conversación para el LLM.
+	"""Construye el prompt del sistema incluyendo contexto de conversación y PDFs."""
 	user = store.get_user(user_id)
 	logger.info("build_system_prompt: buscando usuario", user_id=user_id, store_user_ids=list(store.users.keys()))
 	user_name = user.username if user else "desconocido"
@@ -70,6 +71,7 @@ def build_system_prompt(
 
 
 def is_pdf_query(text: str) -> bool:
+	"""Detecta si el texto del usuario menciona que quiere hablar de un PDF."""
 	if not text:
 		return False
 	pattern = r"\b(pdf|documento|archivo|fichero|adjunto)\b"
@@ -77,6 +79,7 @@ def is_pdf_query(text: str) -> bool:
 
 
 def _sanitize_pdf_text(text: str) -> str:
+	"""Normaliza texto de PDF eliminando saltos de línea y caracteres invisibles."""
 	if not text:
 		return ""
 	cleaned = "".join(ch if ch.isprintable() else " " for ch in text)
@@ -90,6 +93,7 @@ def should_use_pdf_context(
 	conversation_id: str,
 	user_text: str,
 ) -> bool:
+	"""Determina si el mensaje debe consumir contexto del PDF asociado."""
 	if is_pdf_query(user_text):
 		return True
 	documents = store.list_documents_by_conversation(conversation_id)
@@ -112,6 +116,7 @@ def build_pdf_focus_context(
 	user_text: str,
 	max_chars: int = 2000,
 ) -> Optional[str]:
+	"""Construye un bloque de contexto prioritario extraído del PDF más relevante."""
 	if not should_use_pdf_context(store=store, conversation_id=conversation_id, user_text=user_text):
 		return None
 	documents = store.list_documents_by_conversation(conversation_id)
@@ -164,6 +169,7 @@ def build_document_query_prompt(
 	question: str,
 	max_chars: int = 4000,
 ) -> str:
+	"""Construye el prompt que se enviará al LLM para responder preguntas sobre el PDF."""
 	cleaned = _sanitize_pdf_text(content or "")
 	if len(cleaned) > max_chars:
 		cleaned = cleaned[:max_chars] + "..."

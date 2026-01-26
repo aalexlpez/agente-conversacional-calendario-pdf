@@ -1,5 +1,11 @@
 
-"""Endpoints de autenticación con JWT simple."""
+
+"""
+Módulo de endpoints de autenticación para el agente conversacional.
+
+Proporciona endpoints para login y extracción de usuario autenticado usando JWT.
+Incluye manejo de errores y dependencias para la autenticación.
+"""
 
 from __future__ import annotations
 
@@ -23,11 +29,19 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 
 class TokenResponse(BaseModel):
+    """
+    Respuesta estándar para el endpoint de login.
+    Contiene el token de acceso JWT y el tipo de token.
+    """
     access_token: str
     token_type: str = "bearer"
 
 
+
 class TokenData(BaseModel):
+    """
+    Modelo auxiliar para extraer datos del token JWT.
+    """
     username: Optional[str] = None
 
 

@@ -1,4 +1,8 @@
-"""Entidades básicas del dominio."""
+"""Entidades centrales del dominio del agente conversacional.
+
+Cada dataclass representa un agregado o valor que se comparte entre capas,
+manteniendo campos inmutables (como IDs) y timestamps UTC para trazabilidad.
+"""
 
 from __future__ import annotations
 
@@ -9,6 +13,7 @@ from typing import Dict, List, Optional
 
 @dataclass
 class User:
+	"""Representa al usuario autenticado dentro del agente."""
 	id: str
 	username: str
 	full_name: Optional[str] = None
@@ -17,6 +22,7 @@ class User:
 
 @dataclass
 class Message:
+	"""Mensaje que intercambian usuario y asistente dentro de una conversación."""
 	id: str
 	conversation_id: str
 	role: str
@@ -26,6 +32,7 @@ class Message:
 
 @dataclass
 class Conversation:
+	"""Agrupa un historial de mensajes para un usuario y permite títulos opcionales."""
 	id: str
 	user_id: str
 	title: Optional[str] = None
@@ -35,6 +42,7 @@ class Conversation:
 
 @dataclass
 class Event:
+	"""Evento de calendario asociado a un usuario con metadata arbitraria."""
 	id: str
 	user_id: str
 	title: str
@@ -45,6 +53,7 @@ class Event:
 
 @dataclass
 class Document:
+	"""Representa un PDF subido, con texto extraído y metadatos."""
 	id: str
 	user_id: str
 	filename: str

@@ -1,8 +1,8 @@
-"""PDFTool básico (PyPDF2 + búsqueda keyword simple).
+"""
+Herramienta básica para extracción y búsqueda en PDFs.
 
-Persistencia en memoria:
-	- El contenido extraído se guarda en InMemoryStore como Document.
-	- Las búsquedas consultan directamente el contenido almacenado en memoria.
+Usa pdfminer.six para extraer texto, almacena el contenido en memoria y permite
+búsquedas de palabras clave mediante queries textuales.
 """
 
 from __future__ import annotations
@@ -17,12 +17,15 @@ from src.infrastructure.memory_store import InMemoryStore
 from src.tools.base import BaseTool
 
 
+
 class PDFTool(BaseTool):
+	"""Herramienta que extrae texto y busca palabras clave en documentos PDF."""
 	name = "pdf"
 
 	logger = structlog.get_logger()
 
 	def __init__(self, store: InMemoryStore) -> None:
+		"""Recibe la instancia de memoria donde guardará los Documentos."""
 		self._store = store
 
 	def add_document(
@@ -33,6 +36,7 @@ class PDFTool(BaseTool):
 		filename: str,
 		content: str,
 	) -> Document:
+		"""Crea una entidad Document y la persiste en el InMemoryStore."""
 		doc = Document(
 			id=f"doc_{len(self._store.documents) + 1}",
 			user_id=user_id,
@@ -44,6 +48,7 @@ class PDFTool(BaseTool):
 		return doc
 
 	def extract_text(self, file_path: str) -> str:
+		"""Extrae texto del PDF usando pdfminer.six e informa el resultado."""
 		file_size = None
 		try:
 			file_size = os.path.getsize(file_path)
@@ -90,11 +95,15 @@ class PDFTool(BaseTool):
 			return ""
 
 	def search_keyword(self, text: str, keyword: str) -> int:
+		"""Cuenta coincidencias de `keyword` en el texto con sensibilidad reducida."""
 		pattern = re.escape(keyword)
 		return len(re.findall(pattern, text, flags=re.IGNORECASE))
 
 	async def execute(self, query: str) -> str:
-		"""Formato esperado: 'search:<document_id>:<keyword>'"""
+		"""Permite buscar palabras clave en documentos previamente cargados.
+
+		Formato esperado: 'search:<document_id>:<keyword>'
+		"""
 		if not query.startswith("search:"):
 			return "Formato inválido. Usa search:<document_id>:<keyword>"
 		_, rest = query.split("search:", 1)

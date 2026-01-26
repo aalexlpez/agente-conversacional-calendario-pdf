@@ -1,4 +1,8 @@
-"""Servicios de JWT para autenticación."""
+"""Servicios ligeros de JWT para emitir y validar tokens de acceso.
+
+El token usa HS256 y carga mínima de claims. Las claves y expiraciones se pueden
+configurar mediante las variables JWT_SECRET_KEY y JWT_EXPIRE_MINUTES.
+"""
 
 from __future__ import annotations
 
@@ -23,7 +27,7 @@ def create_access_token(data: dict, *, expires_minutes: Optional[int] = None) ->
 
 
 def decode_token(token: str) -> str:
-	"""Decodifica un token JWT y extrae el subject (username)."""
+	"""Valida y decodifica un JWT devolviendo el nombre de usuario (claim sub)."""
 	payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
 	username: Optional[str] = payload.get("sub")
 	if username is None:

@@ -1,3 +1,5 @@
+"""Pruebas de EventUseCase usando una herramienta simulada de calendario."""
+
 from datetime import datetime, timezone
 
 import pytest
@@ -8,10 +10,13 @@ from src.domain.exceptions import ResourceNotFound
 
 
 class FakeCalendarTool:
+	"""Emula un calendar tool guardando eventos en memoria para pruebas."""
+
 	def __init__(self) -> None:
 		self.events: dict[str, Event] = {}
 
 	def create_event(self, *, user_id: str, title: str, starts_at: datetime, ends_at: datetime, metadata=None) -> Event:
+		"""Crea un evento y lo almacena internamente."""
 		event = Event(
 			id=f"evt_{len(self.events) + 1}",
 			user_id=user_id,
@@ -23,15 +28,18 @@ class FakeCalendarTool:
 		return event
 
 	def list_events(self, user_id: str) -> list[Event]:
+		"""Devuelve los eventos asociados a un usuario específico."""
 		return [evt for evt in self.events.values() if evt.user_id == user_id]
 
 	def get_event(self, *, event_id: str, user_id: str):
+		"""Busca un evento por ID (ignorando user_id para simplicidad)."""
 		event = self.events.get(event_id)
 		if not event:
 			return None
 		return event
 
 	def update_event(self, *, event_id: str, title=None, starts_at=None, ends_at=None):
+		"""Actualiza campos del evento si existe."""
 		event = self.events.get(event_id)
 		if not event:
 			return None
@@ -44,10 +52,12 @@ class FakeCalendarTool:
 		return event
 
 	def delete_event(self, event_id: str) -> bool:
+		"""Elimina el evento y retorna si existía."""
 		return self.events.pop(event_id, None) is not None
 
 
 def test_event_use_case_crud() -> None:
+	"""Ejecuta el flujo de eventos y valida los errores cuando se elimina un evento."""
 	calendar = FakeCalendarTool()
 	use_case = EventUseCase(calendar_tool=calendar)
 	start = datetime.now(tz=timezone.utc)

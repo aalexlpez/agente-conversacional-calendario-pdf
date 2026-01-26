@@ -1,3 +1,5 @@
+"""Cobertura de DocumentUseCase, incluyendo búsquedas de documentos."""
+
 import pytest
 
 from src.application.api_use_cases import DocumentUseCase
@@ -9,6 +11,7 @@ from src.tools.pdf_tool import PDFTool
 
 @pytest.mark.asyncio
 async def test_document_use_case_query_success() -> None:
+	"""Confirma que una consulta válida retorna coincidencias."""
 	store = InMemoryStore()
 	pdf_tool = PDFTool(store)
 	use_case = DocumentUseCase(store=store, pdf_tool=pdf_tool)
@@ -40,6 +43,7 @@ async def test_document_use_case_query_success() -> None:
 
 @pytest.mark.asyncio
 async def test_document_use_case_query_not_found() -> None:
+	"""Asegura que consultar un documento inexistente dispara ResourceNotFound."""
 	store = InMemoryStore()
 	pdf_tool = PDFTool(store)
 	use_case = DocumentUseCase(store=store, pdf_tool=pdf_tool)

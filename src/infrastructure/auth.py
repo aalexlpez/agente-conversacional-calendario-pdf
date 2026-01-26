@@ -1,4 +1,8 @@
-"""Autenticación simple basada en un diccionario de usuarios hardcodeado."""
+"""Autenticación simple basada en un diccionario de usuarios hardcodeado y configurable.
+
+Este módulo expone un servicio para validar credenciales en memoria (útil para pruebas y demos)
+sin depender de un proveedor de identidad externo.
+"""
 
 from __future__ import annotations
 
@@ -12,7 +16,7 @@ class AuthService:
     """
 
     class AuthError(Exception):
-        """Excepción personalizada para errores de autenticación."""
+        """Excepción personalizada cuando no se encuentra el usuario solicitado."""
         pass
 
     def __init__(self, users: Optional[Dict[str, str]] = None) -> None:

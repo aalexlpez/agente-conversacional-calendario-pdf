@@ -1,12 +1,10 @@
 from __future__ import annotations
-import structlog
-logger = structlog.get_logger()
+
 """Servicio LLM con soporte de API real y fallback simulado.
 
-Nota:
-	Si hay API key configurada, se llama a APIFreeLLM. Si no, se usa un mock.
+Si hay API key configurada, se llama a APIFreeLLM (o Groq). Si no, se usa un mock ligero
+que devuelve texto simulado, lo que permite pruebas sin dependencias externas.
 """
-
 
 import asyncio
 import os
@@ -15,6 +13,9 @@ from typing import AsyncIterator, Dict, List, Optional
 
 import httpx
 from openai import OpenAI
+
+import structlog
+logger = structlog.get_logger()
 
 from src.tools.base import ToolRegistry
 
@@ -25,6 +26,7 @@ def _build_prompt(
 	messages: List[Dict[str, str]],
 	last_user: str,
 ) -> str:
+	"""Combina prompts y mensajes previos para registrar en el log del LLM."""
 	lines: List[str] = []
 	if system_prompt:
 		lines.append(f"System: {system_prompt}")
@@ -35,9 +37,7 @@ def _build_prompt(
 			continue
 		lines.append(f"{role.title()}: {content}")
 	prompt = last_user if not lines else "\n".join(lines)
-	# Logging del prompt/contexto enviado al LLM
 	conversation_id = None
-	# Buscar conversation_id en los mensajes si está presente
 	for message in messages:
 		if "conversation_id" in message:
 			conversation_id = message["conversation_id"]
@@ -55,6 +55,7 @@ async def _call_apifreellm_provider(
 	messages: List[Dict[str, str]],
 	last_user: str,
 ) -> str:
+	"""Llama al proveedor APIFreeLLM y normaliza su respuesta."""
 	if not api_key:
 		return "Error LLM: API key faltante."
 	prompt = _build_prompt(system_prompt=system_prompt, messages=messages, last_user=last_user)
@@ -86,6 +87,7 @@ async def _call_groq_provider(
 	messages: List[Dict[str, str]],
 	last_user: str,
 ) -> str:
+	"""Llama a Groq vía cliente OpenAI y extrae texto de la respuesta."""
 	if not api_key:
 		return "Error LLM: API key faltante."
 	prompt = _build_prompt(system_prompt=system_prompt, messages=messages, last_user=last_user)
@@ -102,6 +104,7 @@ async def _call_groq_provider(
 
 
 def _extract_response_text(data: object) -> str:
+	"""Extrae el texto útil del payload del proveedor."""
 	if isinstance(data, dict):
 		for key in ("response", "message", "content", "text", "reply"):
 			value = data.get(key)
@@ -113,8 +116,10 @@ def _extract_response_text(data: object) -> str:
 
 
 class AIService:
-	"""Cliente LLM con fallback simulado y streaming por chunks."""
+	"""Cliente LLM con streaming por chunks y fallback local.
 
+	Soporta APIs externas (APIFreeLLM, Groq) y acepta herramientas opcionales.
+	"""
 	def __init__(
 		self,
 		*,
@@ -147,7 +152,7 @@ class AIService:
 		system_prompt: str,
 		messages: List[Dict[str, str]],
 	) -> str:
-		"""Genera una respuesta real si hay API key; si no, usa el mock."""
+		"""Genera una respuesta usando el proveedor configurado o el mock local."""
 		last_user = self._get_last_user_message(messages)
 		if not last_user:
 			return "No hay mensaje de usuario para responder."
@@ -189,6 +194,7 @@ class AIService:
 		messages: List[Dict[str, str]],
 		last_user: str,
 	) -> str:
+		"""Adaptador que delega en APIFreeLLM usando la configuración de servicio."""
 		return await _call_apifreellm_provider(
 			api_key=self._api_key,
 			base_url=self._base_url,
@@ -205,6 +211,7 @@ class AIService:
 		messages: List[Dict[str, str]],
 		last_user: str,
 	) -> str:
+		"""Adaptador que invoca la integración Groq configurada."""
 		return await _call_groq_provider(
 			api_key=self._groq_api_key,
 			system_prompt=system_prompt,
@@ -213,6 +220,7 @@ class AIService:
 		)
 
 	def _get_last_user_message(self, messages: List[Dict[str, str]]) -> str:
+		"""Devuelve el último mensaje con role 'user' o cadena vacía."""
 		for message in reversed(messages):
 			if message.get("role") == "user":
 				return message.get("content", "")

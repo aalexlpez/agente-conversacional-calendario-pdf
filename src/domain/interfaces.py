@@ -8,6 +8,7 @@ T = TypeVar("T")
 
 
 class Repository(Protocol[T]):
+	"""Contrato básico que admiten los almacenes de entidades."""
 	def add(self, item: T) -> None: ...
 
 	def get(self, item_id: str) -> Optional[T]: ...
@@ -16,11 +17,13 @@ class Repository(Protocol[T]):
 
 
 class Tool(Protocol):
+	"""Representa una herramienta externa invocable por el agente."""
 	name: str
 
 	async def execute(self, query: str) -> str: ...
 
 
 class LLM(Protocol):
+	"""Interfaz mínima que debe exponer un servicio de modelo de lenguaje."""
 	async def generate(self, prompt: str) -> str: ...
 

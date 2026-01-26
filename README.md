@@ -15,11 +15,11 @@ Este repositorio implementa un agente conversacional en Python capaz de gestiona
 - [Pruebas](#pruebas)
 - [Notas y anotaciones extra (ejecución sencilla)](#notas-y-anotaciones-extra-ejecución-sencilla)
 - [Estructura del proyecto](#estructura-del-proyecto)
-- [PDF: subida y consultas (con memoria)](#pdf-subida-y-consultas-con-memoria)
+- [Arquitectura del Agente Conversacional](#arquitectura-del-agente-conversacional)
+- [Responder sobre un PDF (subida y consultas con memoria)](#responder-sobre-un-pdf-subida-y-consultas-con-memoria)
 - [Instrucciones ejemplo para agente de calendario](#instrucciones-ejemplo-para-agente-de-calendario)
 - [Extensión por herramientas externas (plugins)](#extensión-por-herramientas-externas-plugins)
 - [Ejemplos rápidos (para un cliente como postman, swagger o cualquiera)](#ejemplos-rápidos-para-un-cliente-como-postman-swagger-o-cualquiera)
-- [Despliegue en Railway (Docker)](#despliegue-en-railway-docker)
 - [Usuarios y contraseñas para la obtención de tokens](#usuarios-y-contraseñas-de-ejemplo)
 
 ## Guía paso a paso
@@ -34,10 +34,10 @@ Si prefieres probar directamente en el entorno desplegado, usa la documentación
 
 - https://agente-conversacional-calendario-pdf.onrender.com/docs
 
-NOTA: Es probable que las primeras peticiones fallen o tarden debido al servidio de Render.com, que activa el servidor al recibir las peticiones.
+NOTA: Es probable que las primeras peticiones fallen o tarden debido al servidio de Render.com, que activa el servidor al recibir las peticiones. Y al ser memoria interna del sistema, cada vez que se apaga el servidor, se borran todos los datos de la memoria (es persistente solo mientras se usa)
 
 ### 3) Probar funcionalidades
-Puedes usar los ejemplos de la sección **Ejemplos rápidos** o las rutas descritas en **Endpoints principales** y **PDF: subida y consultas (con memoria)**.
+Puedes usar los ejemplos de la sección **[Ejemplos rápidos](#ejemplos-rápidos-para-un-cliente-como-postman-swagger-o-cualquiera)** o las rutas descritas en **[Endpoints principales](#endpoints-principales)** y **Responder sobre un PDF (subida y consultas con memoria)**.
 
 ## Características principales
 
@@ -52,7 +52,7 @@ Puedes usar los ejemplos de la sección **Ejemplos rápidos** o las rutas descri
 
 1. Clona el repositorio:
   ```sh
-  git clone https://github.com/tu_usuario/agente-conversacional.git
+  git clone https://github.com/aalexlpez/agente-conversacional-calendario-pdf
   cd agente-conversacional
   ```
 2. Crea y activa un entorno virtual:
@@ -100,9 +100,31 @@ APIFREELLM_MODEL=apifreellm
 
 **Nota:** Si no se configura correctamente la API key o el modelo, el agente mostrará un error al intentar generar respuestas.
 
+
 ## Persistencia
 
-El proyecto usa almacenamiento en memoria (diccionarios) abstraído en la clase `Storage`, lo que permite sustituir el mecanismo de persistencia sin modificar el núcleo.
+Actualmente, **toda la información del agente (usuarios, eventos, conversaciones, documentos PDF, etc.) se almacena en memoria RAM** usando diccionarios Python. Esto significa que los datos existen solo mientras la aplicación está en ejecución: **al reiniciar o apagar el servidor, toda la información se pierde**.
+
+### ¿Cómo está implementada la persistencia?
+- El almacenamiento en memoria está abstraído principalmente en la clase `Storage` y su implementación concreta `InMemoryStore` (ver `src/infrastructure/memory_store.py`).
+- Todas las operaciones de guardado, consulta y borrado pasan por esta capa, lo que permite desacoplar la lógica de negocio del mecanismo de persistencia.
+- El resto del sistema (casos de uso, endpoints, herramientas) interactúa solo con la interfaz de almacenamiento, nunca directamente con los diccionarios.
+
+### Ventajas del enfoque actual
+- **Simplicidad y velocidad:** Ideal para desarrollo, pruebas y despliegues temporales.
+- **Fácil de extender:** Puedes reemplazar la implementación de `Storage` por una basada en base de datos relacional (PostgreSQL, SQLite), NoSQL (MongoDB), archivos, Redis, etc., sin modificar el núcleo de la aplicación.
+
+### Limitaciones
+- **No persistente:** Todos los datos se borran al reiniciar el servidor.
+
+### ¿Cómo migrar a una persistencia real?
+1. Implementa una nueva clase que herede de la interfaz `Storage` y utilice el backend deseado (por ejemplo, una base de datos SQL).
+2. Sustituye la instancia de `InMemoryStore` por tu nueva clase en la inicialización de la app.
+3. El resto del sistema funcionará igual, ya que depende solo de la interfaz.
+
+### Ubicación del código relevante
+- Abstracción y lógica de almacenamiento: `src/infrastructure/memory_store.py`
+- Uso en la aplicación: ver inyección de dependencias y casos de uso en `src/application/` y `src/api/`
 
 ## Herramientas externas y extensibilidad
 
@@ -136,19 +158,46 @@ _tool_registry.register(WeatherTool())
 - **GET /documents**: Lista documentos, opcionalmente filtrados por conversación.
 - **POST /documents/query**: Busca palabras clave en el contenido de un PDF.
 
+
 ## Pruebas
 
-Para ejecutar los tests unitarios y de integración:
+El proyecto incluye una suite de **pruebas automáticas** organizadas en la carpeta `tests/`. Estas pruebas cubren tanto la lógica de negocio como la integración de los principales casos de uso del agente.
+
+### Tipos de pruebas
+
+- **Pruebas unitarias:** Verifican el funcionamiento aislado de componentes clave como utilidades, servicios, herramientas y lógica de dominio.
+  - Ejemplo: `test_jwt_service.py`, `test_prompt_utils.py`, `test_notification_manager.py`, `test_conversation_manager.py`.
+- **Pruebas de integración:** Evalúan el comportamiento de los endpoints y la interacción entre componentes, simulando flujos completos de usuario.
+  - Ejemplo: `test_api.py`, `test_api_use_cases_auth.py`, `test_api_use_cases_conversations.py`, `test_api_use_cases_documents.py`, `test_api_use_cases_events.py`, `test_send_message_use_case.py`.
+- **Pruebas de herramientas externas:** Validan la integración con utilidades como la extracción de PDFs.
+  - Ejemplo: `test_integration_pdf_extraction.py`.
+
+### Ejecución de pruebas
+
+Para ejecutar todos los tests:
 ```sh
 python -m pytest
 ```
-Puedes configurar la URL base de la API en el archivo `.env` usando la variable `API_BASE_URL`.
+Esto buscará y ejecutará automáticamente todos los archivos que comiencen con `test_` en la carpeta `tests/`.
 
-## Notas y anotaciones extra (ejecución sencilla)
+Puedes ejecutar un archivo de test específico, por ejemplo:
+```sh
+python -m pytest tests/test_api_use_cases_documents.py
+```
+### Cobertura
+
+Las pruebas cubren:
+- Autenticación y generación/validación de tokens JWT.
+- Gestión de conversaciones y tareas.
+- Subida, extracción y consulta de PDFs.
+- Integración con el LLM y herramientas externas.
+- Notificaciones y eventos de calendario.
+
+## Anotaciones extra (ejecución sencilla)
 
 - **.env recomendado:** copia `.env.example` a `.env` y completa claves. Si no usas Google Calendar, puedes dejar esas variables vacías.
 - **Uvicorn en Windows:** usa `uvicorn src.api.main:app --reload` desde el entorno virtual activado.
-- **Credenciales demo:** por defecto existen usuarios `user1`/`pass1`, `user2`/`pass2`, etc. (ver `AuthService`).
+- **[Credenciales demo:](#usuarios-y-contraseñas-de-ejemplo)** por defecto existen usuarios `user1`/`pass1`, `user2`/`pass2`, etc. (ver `AuthService`).
 - **PDFs:** la extracción usa `pdfminer.six`; si no está instalado, la extracción devolverá vacío.
 - **WebSocket:** conecta a `ws://localhost:8000/ws/chat/{conversation_id}?token=<TOKEN>` para chat en tiempo real.
 - **Swagger:** `http://localhost:8000/docs` para explorar endpoints y probarlos.
@@ -161,11 +210,91 @@ Puedes configurar la URL base de la API en el archivo `.env` usando la variable 
 - `src/api/`: Endpoints y controladores FastAPI
 - `tests/`: Pruebas unitarias y de integración
 
+## Arquitectura del Agente Conversacional
 
-## PDF: subida y consultas (con memoria)
-La funcionalidad de PDFs ya está implementada mediante un endpoint de subida y otro de consulta. La extracción y búsqueda se encapsulan en `PDFTool` (implementación de `BaseTool`), y el contenido se persiste en memoria para que el agente lo use en conversaciones posteriores.
+Este documento describe la arquitectura general del proyecto, incluyendo un diagrama visual (ASCII) y diagramas Mermaid para comprender la solución y sus conexiones.
 
-### Endpoints disponibles
+### Diagrama Visual (ASCII) — Capas y Conexiones
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                   API Layer                                 │
+│  FastAPI REST + WebSocket                                                   │
+│  - auth.py (JWT login)                                                      │
+│  - conversations.py (CRUD conversaciones)                                   │
+│  - documents.py (upload/query PDF)                                          │
+│  - websocket.py (chat streaming)                                            │
+└───────────────┬─────────────────────────────────────────────────────────────┘
+                │ Depends / Inyección
+┌───────────────▼─────────────────────────────────────────────────────────────┐
+│                             Application Layer                               │
+│  - SendMessageUseCase (orquestador)                                         │
+│  - ConversationUseCase / DocumentUseCase / EventUseCase                     │
+│  - AuthLoginUseCase                                                         │
+│  - ConversationManager (concurrencia & estado activo)                       │
+│  - NotificationManager (finalización de respuesta)                          │
+└───────────┬──────────────────────────┬──────────────────────────────────────┘
+            │                          │
+            │                          │
+┌───────────▼───────────┐  ┌───────────▼─────────────────────────────────────┐
+│  Infrastructure Layer │  │                 Tools (Plugins)                 │
+│  - InMemoryStore      │  │  - ToolRegistry                                 │
+│  - AIService (LLM)    │  │  - PDFTool (pdfminer.six)                       │
+│  - AuthService        │  │  - GoogleCalendarTool (Google API)              │
+│  - JWT Service        │  │                                                 │
+└───────────┬───────────┘  └───────────┬─────────────────────────────────────┘
+            │                          │
+            │                          │
+┌───────────▼────────────────────────────────────────────────────────────────┐
+│                               Domain Layer                                 │
+│  - Entities (User, Conversation, Message, Event, Document)                 │
+│  - Interfaces (Protocols)                                                  │
+│  - Exceptions (DomainError, ResourceNotFound, etc.)                        │
+└────────────────────────────────────────────────────────────────────────────┘
+            │
+            │ Integraciones externas
+┌───────────▼────────────────────────────────────────────────────────────────┐
+│  External Services                                                         │
+│  - APIFreeLLM / Groq                                                       │
+│  - Google Calendar API                                                     │
+└────────────────────────────────────────────────────────────────────────────┘
+```
+
+
+## Responder sobre un PDF (subida y consultas con memoria)
+El agente permite responder preguntas y realizar búsquedas sobre el contenido de documentos PDF subidos por el usuario. Esta funcionalidad es clave para escenarios donde se necesita extraer información específica, buscar palabras clave o responder consultas contextuales basadas en documentos.
+
+### ¿Cómo funciona?
+
+1. **Subida y extracción:**
+   - El usuario sube un PDF mediante el endpoint `/documents/upload`.
+   - El sistema extrae automáticamente el texto del PDF usando la herramienta `PDFTool (pdfminer.six)`.
+   - El texto extraído se almacena en memoria como un objeto `Document`, asociado al usuario y a la conversación activa.
+
+2. **Consulta y respuesta:**
+   - El usuario puede realizar consultas sobre el PDF usando el endpoint `/documents/query`, indicando el `document_id`, la `conversation_id` y la palabra clave o pregunta.
+   - **Si hay un LLM configurado:** El agente construye un prompt con el contenido del PDF y la pregunta del usuario, y delega la generación de la respuesta al LLM. Así, la respuesta es inteligente y contextual, no solo una búsqueda literal de palabras clave.
+   - **Si NO hay LLM disponible:** El sistema recurre a la herramienta `PDFTool` para realizar una búsqueda simple de palabras clave en el texto extraído (por ejemplo, contar ocurrencias o extraer fragmentos relevantes).
+   - Si el PDF no tiene texto extraíble (por ejemplo, es un escaneo sin OCR), el sistema informa al usuario que no se pudo extraer texto legible.
+
+> **Resumen:** Por defecto, el endpoint `/documents/query` responde usando el LLM para generar respuestas inteligentes sobre el contenido del PDF. Solo si no hay LLM disponible, se realiza una búsqueda literal de palabras clave.
+
+### Integración con la memoria del agente
+
+- Todos los documentos PDF y su contenido extraído se almacenan en la memoria interna (`InMemoryStore`) del agente.
+- Cada documento está vinculado a un usuario y a una conversación, permitiendo que el agente recuerde y reutilice el contenido en interacciones futuras sin necesidad de volver a procesar el archivo.
+- Cuando el usuario realiza una consulta sobre un PDF, el agente accede a la memoria, recupera el documento y utiliza la herramienta de búsqueda para responder de forma rápida y precisa.
+
+### Ejemplo de flujo
+
+1. El usuario sube un archivo PDF a través de `/documents/upload`.
+2. El agente extrae el texto y lo almacena en memoria.
+3. El usuario pregunta: "¿Cuántas veces aparece la palabra 'contrato' en el PDF?" usando `/documents/query`.
+4. El agente busca en el texto almacenado y responde con el número de coincidencias.
+5. En una conversación, el agente puede usar el contenido del PDF para dar respuestas contextuales, por ejemplo: "¿Qué dice la cláusula 5 del documento?".
+
+### Ejemplos de endpoints y abstracción
+
 - **POST /documents/upload** (multipart/form-data)
   - Campos: `file` (PDF), `conversation_id`
   - Resultado: devuelve `document_id` y metadatos.
@@ -175,18 +304,13 @@ La funcionalidad de PDFs ya está implementada mediante un endpoint de subida y 
   - Campos: `conversation_id`, `document_id`, `keyword`
   - Resultado: respuesta basada en el contenido del PDF.
 
-### Abstracción de la herramienta
 `PDFTool` encapsula la extracción y búsqueda del contenido. Si más adelante quieres cambiar el motor (por ejemplo, usar embeddings o un servicio externo), solo necesitas reemplazar la implementación de `PDFTool` manteniendo la misma interfaz.
 
-### Integración con la memoria del agente
-- Al subir un PDF, el texto extraído se almacena como `Document` en `InMemoryStore` asociado al `user_id` y `conversation_id`.
-- Al consultar, el endpoint recupera el documento desde memoria y delega a `PDFTool` la búsqueda.
-- Esto permite reutilizar el contenido del PDF en la misma conversación sin re-procesar el archivo.
+### Ubicación del código relevante
 
-> Ubicación del código:
-> - Endpoints: `src/api/documents.py`
-> - Herramienta: `src/tools/pdf_tool.py`
-> - Memoria: `src/infrastructure/memory_store.py`
+- Endpoints: `src/api/documents.py`
+- Herramienta de extracción y búsqueda: `src/tools/pdf_tool.py`
+- Memoria del agente: `src/infrastructure/memory_store.py`
 
 ## Instrucciones ejemplo para agente de calendario
 
@@ -195,8 +319,8 @@ La funcionalidad de PDFs ya está implementada mediante un endpoint de subida y 
 </p>
 
 
-> Los endpoints de eventos <b>no van a funcionar</b>, ya que actualmente la integración con Google Calendar utiliza mi acceso personal de Google Cloud Platform. En un entorno real, cada usuario debería autenticar su propia cuenta de Google y autorizar el acceso a su calendario personal para gestionar sus eventos de forma independiente. 
-> He dejado dos imagenes en la ruta raíz para apreciar interacciones que he tenido en mi google calendar. En la imagen 1, van a ver una interacción con el LLM a través de postman para organizar reuniones. En la imagen 2, van a ver mi google calendar con los eventos organizados.
+> Los endpoints de eventos <b>puede que no funcionen o no lo vean en tiempo real</b>, ya que actualmente la integración con Google Calendar utiliza mi acceso personal de Google Cloud Platform. En un entorno real, cada usuario debería autenticar su propia cuenta de Google y autorizar el acceso a su calendario personal para gestionar sus eventos de forma independiente. 
+> He dejado dos imagenes en la ruta raíz para apreciar interacciones que he tenido en mi google calendar. En la imagen 1, van a ver una interacción con el LLM a través de postman con websocket para organizar reuniones. En la imagen 2, van a ver mi google calendar con los eventos organizados.
 
 <b>Agregar evento:</b>
 
@@ -223,7 +347,7 @@ Ejemplo: "Borra el evento del 30 de enero."
 
 ## Extensión por herramientas externas (plugins)
 
-El agente está diseñado para ser fácilmente extensible con nuevas herramientas externas (por ejemplo, APIs, servicios, utilidades) sin modificar el núcleo del sistema. Esto se logra mediante un patrón de registro de plugins:
+El agente está diseñado para ser extensible con nuevas herramientas externas (por ejemplo, APIs, servicios, utilidades) sin modificar el núcleo del sistema. Esto se logra mediante un patrón de registro de plugins:
 
 ### ¿Cómo funciona?
 - **Interfaz común:** Todas las herramientas deben heredar de la clase abstracta `BaseTool` (ver `src/tools/base.py`).
@@ -297,33 +421,6 @@ curl -X POST http://localhost:8000/events \
   -H "Content-Type: application/json" \
   -d '{"title":"Reunión","starts_at":"2026-01-25T10:00:00Z","ends_at":"2026-01-25T11:00:00Z"}'
 ```
-
-## Despliegue en Railway (Docker)
-
-Puedes desplegar este agente en Railway usando el Dockerfile incluido. Railway permite levantar servicios backend en Python fácilmente y tiene un plan gratuito.
-
-### Pasos para desplegar en Railway
-
-1. **Sube tu repositorio a GitHub** (o GitLab).
-2. **Crea un proyecto en Railway**:
-   - Ve a https://railway.app/
-   - Inicia sesión y haz clic en "New Project" > "Deploy from GitHub repo".
-   - Selecciona tu repositorio.
-3. **Railway detectará el Dockerfile automáticamente** y construirá la imagen.
-4. **Configura variables de entorno** en la sección "Variables" de Railway (por ejemplo, claves de API, secretos, etc.).
-5. **El servicio se expondrá en el puerto 8000** (por defecto). Railway asigna una URL pública.
-6. **Accede a tu agente desplegado** usando la URL que te da Railway (por ejemplo, `https://tu-proyecto.up.railway.app/docs`).
-
-#### Ejemplo de despliegue local con Docker
-
-```sh
-# Construye la imagen
- docker build -t agente-conversacional .
-# Ejecuta el contenedor
- docker run -p 8000:8000 --env-file .env agente-conversacional
-```
-
-> **Nota:** Si usas Google Calendar o LLM externos, asegúrate de subir los archivos de credenciales y configurar las variables de entorno necesarias en Railway.
 
 ## Usuarios y contraseñas de ejemplo
 

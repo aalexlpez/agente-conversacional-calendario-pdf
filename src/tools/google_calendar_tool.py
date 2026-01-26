@@ -1,4 +1,8 @@
-"""Integración con Google Calendar API (OAuth usuario o service account)."""
+"""
+Herramienta de integración con Google Calendar API.
+
+Soporta OAuth de usuario y service account para realizar CRUD sobre eventos.
+"""
 
 from __future__ import annotations
 
@@ -19,6 +23,7 @@ logger = structlog.get_logger()
 
 
 class GoogleCalendarTool(BaseTool):
+	"""Expone métodos para manipular eventos en Google Calendar."""
 	name = "calendar"
 
 	def __init__(
@@ -29,6 +34,7 @@ class GoogleCalendarTool(BaseTool):
 		timezone_name: str = "UTC",
 		scopes: Optional[list[str]] = None,
 	) -> None:
+		"""Configura credenciales, calendario y cliente para la herramienta."""
 		env_calendar_id = os.getenv("GOOGLE_CALENDAR_ID")
 		env_timezone = os.getenv("GOOGLE_CALENDAR_TIMEZONE")
 		env_scopes = os.getenv("GOOGLE_CALENDAR_SCOPES")
@@ -71,6 +77,7 @@ class GoogleCalendarTool(BaseTool):
 		ends_at: datetime,
 		metadata: Optional[dict[str, str]] = None,
 	) -> Event:
+		"""Inserta un evento en el calendario y devuelve el resultado en forma de Event."""
 		body = {
 			"summary": title,
 			"start": self._build_datetime(starts_at),
@@ -105,6 +112,7 @@ class GoogleCalendarTool(BaseTool):
 		starts_at: Optional[datetime] = None,
 		ends_at: Optional[datetime] = None,
 	) -> Optional[Event]:
+		"""Actualiza los campos proporcionados de un evento existente."""
 		payload: dict[str, object] = {}
 		if title is not None:
 			payload["summary"] = title
@@ -136,6 +144,7 @@ class GoogleCalendarTool(BaseTool):
 		)
 
 	def delete_event(self, event_id: str) -> bool:
+		"""Elimina un evento y devuelve True si se borró correctamente."""
 		try:
 			self._service.events().delete(
 				calendarId=self._calendar_id,
@@ -148,6 +157,7 @@ class GoogleCalendarTool(BaseTool):
 			raise RuntimeError(f"Error Google Calendar al eliminar evento: {exc}") from exc
 
 	def list_events(self, user_id: str) -> list[Event]:
+		"""Lista eventos del calendario ordenados por hora de inicio."""
 		try:
 			result = self._service.events().list(
 				calendarId=self._calendar_id,
@@ -171,6 +181,7 @@ class GoogleCalendarTool(BaseTool):
 		]
 
 	def get_event(self, *, event_id: str, user_id: str) -> Optional[Event]:
+		"""Obtiene un evento por ID o devuelve None si no existe."""
 		try:
 			item = self._service.events().get(
 				calendarId=self._calendar_id,
@@ -191,6 +202,7 @@ class GoogleCalendarTool(BaseTool):
 		)
 
 	def _build_datetime(self, value: datetime) -> dict[str, str]:
+		"""Construye el payload temporal requerido por la API."""
 		if value.tzinfo is None:
 			value = value.replace(tzinfo=timezone.utc)
 		return {
@@ -199,6 +211,7 @@ class GoogleCalendarTool(BaseTool):
 		}
 
 	def _parse_datetime(self, payload: Optional[dict]) -> datetime:
+		"""Parsea el diccionario de la API como datetime con zona UTC."""
 		if not payload:
 			return datetime.now(tz=timezone.utc)
 		value = payload.get("dateTime") or payload.get("date")
@@ -210,6 +223,7 @@ class GoogleCalendarTool(BaseTool):
 			return datetime.now(tz=timezone.utc)
 
 	async def execute(self, query: str) -> str:
+		"""Interface textual mínima; se recomienda usar los métodos específicos."""
 		return (
 			"GoogleCalendarTool listo. Usa create_event(), update_event(), delete_event(), "
 			"list_events()."

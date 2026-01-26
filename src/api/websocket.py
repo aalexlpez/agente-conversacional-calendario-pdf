@@ -1,4 +1,9 @@
-"""WebSocket handler para chat con streaming y notificaciones."""
+
+"""
+Módulo WebSocket para chat en tiempo real con streaming y notificaciones.
+
+Permite la comunicación bidireccional entre el cliente y el agente conversacional, soportando mensajes en streaming y notificaciones de finalización de respuesta.
+"""
 
 from __future__ import annotations
 
@@ -17,10 +22,20 @@ from src.api.deps import get_notification_manager, get_store, send_message_use_c
 router = APIRouter(tags=["websocket"])
 
 
+
 @router.websocket("/ws/chat/{conversation_id}")
-# Este endpoint es asíncrono porque maneja múltiples conexiones WebSocket concurrentes.
-# Permite streaming de mensajes y notificaciones en tiempo real sin bloquear el event loop.
 async def chat_ws(websocket: WebSocket, conversation_id: str) -> None:
+	"""
+	WebSocket handler para chat en tiempo real con streaming y notificaciones.
+
+	Permite a un cliente autenticado enviar mensajes y recibir respuestas en streaming,
+	así como notificaciones de finalización de respuesta para una conversación específica.
+	La función es asíncrona y soporta múltiples conexiones concurrentes.
+
+	Args:
+		websocket (WebSocket): Conexión WebSocket gestionada por FastAPI.
+		conversation_id (str): ID de la conversación activa.
+	"""
 	token = websocket.query_params.get("token")
 	if not token:
 		await websocket.close(code=1008)
@@ -42,11 +57,13 @@ async def chat_ws(websocket: WebSocket, conversation_id: str) -> None:
 	notification_manager = get_notification_manager()
 	subscription = notification_manager.subscribe(conversation_id=conversation_id)
 
-	# Tarea asíncrona para enviar notificaciones en tiempo real al cliente.
 	async def send_notifications() -> None:
+		"""
+		Tarea asíncrona para enviar notificaciones en tiempo real al cliente.
+		Espera mensajes en la cola de la subscripción y los envía por WebSocket.
+		"""
 		try:
 			while True:
-				# Esperamos mensajes de notificación de forma asíncrona (no bloquea el event loop).
 				message = await subscription.queue.get()
 				await websocket.send_text(json.dumps({"type": "notification", "event": message}))
 		except asyncio.CancelledError:

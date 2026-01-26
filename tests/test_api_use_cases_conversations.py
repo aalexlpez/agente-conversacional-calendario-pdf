@@ -1,3 +1,5 @@
+"""Validación de ConversationUseCase y su manipulación del historial."""
+
 from datetime import timedelta
 
 import pytest
@@ -9,6 +11,7 @@ from src.infrastructure.memory_store import InMemoryStore
 
 
 def test_conversation_use_case_crud() -> None:
+	"""Ejecuta el flujo CRUD completo y asegura que se limpian los mensajes."""
 	store = InMemoryStore()
 	use_case = ConversationUseCase(store=store)
 
@@ -30,6 +33,7 @@ def test_conversation_use_case_crud() -> None:
 
 
 def test_conversation_use_case_get_with_messages_sorted() -> None:
+	"""Verifica que los mensajes se ordenan por timestamp descendente."""
 	store = InMemoryStore()
 	use_case = ConversationUseCase(store=store)
 	conv = use_case.create(user_id="user-1", title="historial")

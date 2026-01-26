@@ -1,3 +1,5 @@
+"""Integración de PDFTool con un PDF mínimo construido manualmente."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -7,6 +9,7 @@ from src.tools.pdf_tool import PDFTool
 
 
 def build_simple_pdf_bytes(text: str) -> bytes:
+	"""Genera bytes de un PDF muy simple con un texto embebido."""
 	header = b"%PDF-1.4\n%\xe2\xe3\xcf\xd3\n"
 	stream = f"BT /F1 24 Tf 72 120 Td ({text}) Tj ET".encode("latin1")
 	objects: list[bytes] = []
@@ -50,6 +53,7 @@ def build_simple_pdf_bytes(text: str) -> bytes:
 
 
 def test_pdf_extraction_integration(tmp_path: Path) -> None:
+	"""Verifica que PDFTool puede extraer texto del PDF generado."""
 	pdf_bytes = build_simple_pdf_bytes("Hola PDF")
 	pdf_path = tmp_path / "simple.pdf"
 	pdf_path.write_bytes(pdf_bytes)

@@ -22,6 +22,7 @@ logger = structlog.get_logger()
 
 
 def _normalize(text: str) -> str:
+    """Normaliza texto quitando acentos para comparaciones insensibles."""
     normalized = unicodedata.normalize("NFD", text.lower())
     return "".join(ch for ch in normalized if unicodedata.category(ch) != "Mn")
 
@@ -36,6 +37,7 @@ async def maybe_handle_calendar_llm(
     store: InMemoryStore,
     conversation_id: str,
 ) -> Optional[str]:
+    """Analiza la intención de calendario y ejecuta la acción correspondiente."""
     if should_use_pdf_context(store=store, conversation_id=conversation_id, user_text=text):
         return None
     calendar_tool = tool_registry.get("calendar")
@@ -220,6 +222,7 @@ async def maybe_handle_calendar_llm(
 
 
 def _build_calendar_intent_prompt() -> str:
+    """Construye el prompt del sistema que debe devolver la intención en JSON."""
     today = datetime.now(tz=timezone.utc).date().isoformat()
     return (
         "Eres un extractor de intención para un calendario. "
@@ -249,6 +252,7 @@ def _build_calendar_intent_prompt() -> str:
 
 
 def _normalize_intent_dates(*, intent: Dict[str, Any], user_text: str) -> Dict[str, Any]:
+    """Agrega el año faltante a fechas relativas si no se menciona explícitamente."""
     if not intent:
         return intent
     if _user_mentions_year(user_text):
@@ -277,10 +281,12 @@ def _normalize_intent_dates(*, intent: Dict[str, Any], user_text: str) -> Dict[s
 
 
 def _user_mentions_year(text: str) -> bool:
+    """Detecta si el usuario indicó un año para evitar recalculo."""
     return bool(re.search(r"\b(19|20)\d{2}\b", text))
 
 
 def _adjust_date_if_year_missing(date_str: str) -> Optional[str]:
+    """Ajusta la fecha agregando el año correcto si falta y no es pasada."""
     try:
         date_value = datetime.fromisoformat(date_str).date()
     except ValueError:
@@ -293,6 +299,7 @@ def _adjust_date_if_year_missing(date_str: str) -> Optional[str]:
 
 
 def _parse_calendar_intent(raw: str) -> Optional[Dict[str, Any]]:
+    """Intenta decodificar el JSON devuelto por el LLM y soluciona texto extra."""
     if not raw:
         return None
     try:
@@ -308,6 +315,7 @@ def _parse_calendar_intent(raw: str) -> Optional[Dict[str, Any]]:
 
 
 def _extract_json_from_text(text: str) -> Optional[str]:
+    """Extrae el primer objeto JSON válido que encuentre en un texto mixto."""
     if "{" not in text or "}" not in text:
         return None
     start = text.find("{")
@@ -319,10 +327,7 @@ def _extract_json_from_text(text: str) -> Optional[str]:
 
 
 def _combine_date_time_europe_madrid(date_str: str, time_str: str) -> Optional[datetime]:
-    """
-    Combina fecha y hora como si fueran hora local de España (Europe/Madrid),
-    y retorna el datetime en UTC (para Google Calendar).
-    """
+    """Combina fecha y hora locales de Madrid y devuelve UTC para el calendario."""
     if not date_str or not time_str:
         return None
     normalized_time = time_str
@@ -344,6 +349,7 @@ def _combine_date_time_europe_madrid(date_str: str, time_str: str) -> Optional[d
 
 
 def _start_of_day(date_str: Optional[str]) -> Optional[datetime]:
+    """Devuelve el inicio del día en formato datetime UTC si la fecha es válida."""
     if not date_str:
         return None
     try:
@@ -361,6 +367,7 @@ def _find_event_by_title_date(
     title: Optional[str],
     date_str: Optional[str],
 ) -> Optional[Event | list[Event]]:
+    """Busca eventos que coincidan con título y/o fecha para operaciones de edición o eliminación."""
     if not events:
         return None
     filtered = events
@@ -383,6 +390,7 @@ def _find_event_by_title_date(
 
 
 def _parse_time(text: str) -> Optional[str]:
+    """Normaliza horarios libres como '5pm' o '17:30'."""
     match = re.search(r"\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\b", text, flags=re.IGNORECASE)
     if not match:
         return None
@@ -397,6 +405,7 @@ def _parse_time(text: str) -> Optional[str]:
 
 
 def _format_event(event: Event) -> str:
+    """Formatea eventos para respuestas de usuario (ID, título y rango horario)."""
     return (
         f"- {event.id}: {event.title} "
         f"({event.starts_at.isoformat()} - {event.ends_at.isoformat()})"

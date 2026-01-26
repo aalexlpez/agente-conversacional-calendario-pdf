@@ -25,7 +25,7 @@ from src.tools.pdf_tool import PDFTool
 
 
 class AuthLoginUseCase:
-	"""Autenticación y emisión de token JWT."""
+	"""Caso de uso que encapsula la autenticación de usuarios con JWT."""
 
 	def __init__(self, *, auth_service: AuthService, store: InMemoryStore, token_factory) -> None:
 		self._auth_service = auth_service
@@ -33,6 +33,18 @@ class AuthLoginUseCase:
 		self._token_factory = token_factory
 
 	def execute(self, *, username: str, password: str) -> str:
+		"""Valida credenciales y genera un token JWT.
+
+		Gestión de errores centralizada para errores de servicio o credenciales inválidas.
+		Si el usuario no existe en memoria, lo crea automáticamente.
+
+		Args:
+			username: Nombre de usuario.
+			password: Contraseña asociada.
+
+		Returns:
+			El token JWT generado.
+		"""
 		try:
 			ok = self._auth_service.authenticate(username, password)
 		except AttributeError as exc:
@@ -50,12 +62,13 @@ class AuthLoginUseCase:
 
 
 class ConversationUseCase:
-	"""Casos de uso CRUD para conversaciones."""
+	"""Caso de uso para gestionar conversaciones del usuario."""
 
 	def __init__(self, *, store: InMemoryStore) -> None:
 		self._store = store
 
 	def create(self, *, user_id: str, title: Optional[str] = None) -> Conversation:
+		"""Crea una conversación y la persiste en memoria."""
 		conversation = Conversation(
 			id=f"conv_{len(self._store.conversations) + 1}",
 			user_id=user_id,
@@ -65,9 +78,11 @@ class ConversationUseCase:
 		return conversation
 
 	def list(self, *, user_id: str) -> List[Conversation]:
+		"""Recupera todas las conversaciones de un usuario."""
 		return [c for c in self._store.conversations.values() if c.user_id == user_id]
 
 	def get_with_messages(self, *, conversation_id: str, user_id: str) -> tuple[Conversation, List[Message]]:
+		"""Devuelve conversación y mensajes ordenados para la vista detallada."""
 		conversation = self._store.get_conversation(conversation_id)
 		if not conversation or conversation.user_id != user_id:
 			raise ResourceNotFound("Conversación no encontrada")
@@ -78,6 +93,7 @@ class ConversationUseCase:
 		return conversation, messages
 
 	def update(self, *, conversation_id: str, user_id: str, title: Optional[str]) -> Conversation:
+		"""Actualiza el título si se proporciona y mantiene integridad del user_id."""
 		conversation = self._store.get_conversation(conversation_id)
 		if not conversation or conversation.user_id != user_id:
 			raise ResourceNotFound("Conversación no encontrada")
@@ -86,6 +102,7 @@ class ConversationUseCase:
 		return conversation
 
 	def delete(self, *, conversation_id: str, user_id: str) -> None:
+		"""Elimina una conversación verificando la propiedad del usuario."""
 		conversation = self._store.get_conversation(conversation_id)
 		if not conversation or conversation.user_id != user_id:
 			raise ResourceNotFound("Conversación no encontrada")
@@ -93,14 +110,16 @@ class ConversationUseCase:
 
 
 class DocumentUseCase:
-	"""Casos de uso para documentos PDF."""
+	"""Caso de uso que gestiona el ciclo de vida de documentos PDF."""
 
 	def __init__(self, *, store: InMemoryStore, pdf_tool: PDFTool, llm: Optional[LLM] = None) -> None:
+		"""Recibe el store, la herramienta PDF y un LLM opcional para preguntas."""
 		self._store = store
 		self._pdf_tool = pdf_tool
 		self._llm = llm
 
 	async def upload(self, *, user_id: str, conversation_id: str, filename: str, content: bytes) -> Document:
+		"""Extrae texto del PDF en un hilo y lo persiste usando la herramienta."""
 		conversation = self._store.get_conversation(conversation_id)
 		if not conversation or conversation.user_id != user_id:
 			raise ResourceNotFound("Conversación no encontrada")
@@ -132,6 +151,7 @@ class DocumentUseCase:
 		return document
 
 	def list(self, *, user_id: str, conversation_id: Optional[str] = None) -> List[Document]:
+		"""Lista documentos filtrando por usuario y, opcionalmente, conversación."""
 		if conversation_id:
 			conversation = self._store.get_conversation(conversation_id)
 			if not conversation or conversation.user_id != user_id:
@@ -140,6 +160,7 @@ class DocumentUseCase:
 		return self._store.list_documents_by_user(user_id)
 
 	async def query(self, *, user_id: str, conversation_id: str, document_id: str, keyword: str) -> str:
+		"""Busca información en el PDF usando LLM o búsqueda por palabras."""
 		conversation = self._store.get_conversation(conversation_id)
 		if not conversation or conversation.user_id != user_id:
 			raise ResourceNotFound("Conversación no encontrada")
@@ -167,12 +188,13 @@ class DocumentUseCase:
 
 
 class EventUseCase:
-	"""Casos de uso CRUD para eventos de calendario."""
+	"""Caso de uso que expone la integración con la herramienta de calendario."""
 
 	def __init__(self, *, calendar_tool: GoogleCalendarTool) -> None:
 		self._calendar_tool = calendar_tool
 
 	def create(self, *, user_id: str, title: str, starts_at: datetime, ends_at: datetime) -> Event:
+		"""Crea un nuevo evento en el calendario del usuario."""
 		try:
 			return self._calendar_tool.create_event(
 				user_id=user_id,
@@ -184,12 +206,14 @@ class EventUseCase:
 			raise ExternalServiceError(str(exc)) from exc
 
 	def list(self, *, user_id: str) -> List[Event]:
+		"""Lista eventos del usuario delegando en Google Calendar."""
 		try:
 			return self._calendar_tool.list_events(user_id)
 		except RuntimeError as exc:
 			raise ExternalServiceError(str(exc)) from exc
 
 	def get(self, *, event_id: str, user_id: str) -> Event:
+		"""Obtiene un evento por ID validando existencia."""
 		try:
 			event = self._calendar_tool.get_event(event_id=event_id, user_id=user_id)
 		except RuntimeError as exc:
@@ -207,6 +231,7 @@ class EventUseCase:
 		starts_at: Optional[datetime],
 		ends_at: Optional[datetime],
 	) -> Event:
+		"""Actualiza campos de un evento existente y evita inconsistencias."""
 		try:
 			updated = self._calendar_tool.update_event(
 				event_id=event_id,
@@ -223,6 +248,7 @@ class EventUseCase:
 		return updated
 
 	def delete(self, *, event_id: str, user_id: str) -> None:
+		"""Elimina un evento y lanza excepción si falla el servicio."""
 		try:
 			deleted = self._calendar_tool.delete_event(event_id)
 		except RuntimeError as exc:
