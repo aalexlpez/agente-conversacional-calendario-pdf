@@ -1,26 +1,61 @@
 # Agente Conversacional para Gestión de Calendario
 
-Este repositorio implementa un agente conversacional en Python capaz de gestionar eventos de calendario, mantener conversaciones contextuales y responder preguntas sobre documentos PDF. El diseño sigue principios SOLID, utiliza asincronía y es fácilmente extensible mediante un sistema de plugins para herramientas externas.
+Este repositorio implementa un agente conversacional en Python capaz de gestionar eventos de calendario, mantener conversaciones contextuales y responder preguntas sobre documentos PDF. El diseño sigue principios SOLID, utiliza asincronía (`async/await`) y es fácilmente extensible mediante un sistema de plugins para herramientas externas.
+
+---
+
+## Para evaluadores (TL;DR)
+
+- El proyecto **cumple los requisitos funcionales y de diseño** solicitados en la prueba técnica.
+- Arquitectura basada en **controladores delgados**, **principios SOLID** e **inversión de dependencias**.
+- Soporte para **múltiples conversaciones concurrentes**, asincronía y **streaming vía WebSocket**.
+- Sistema de **herramientas extensible** mediante registro de plugins, sin modificar el núcleo del agente.
+- La **parte teórica** solicitada en la prueba se encuentra documentada en el archivo `RESPUESTAS_TECNICAS.md`.
+
+Para una revisión rápida, se recomienda consultar:
+1. Arquitectura del Agente Conversacional
+2. Persistencia
+3. Herramientas externas y extensibilidad
+4. Pruebas
+
+---
 
 ## Índice
 
+### Uso y ejecución
 - [Guía paso a paso](#guía-paso-a-paso)
-- [Características principales](#características-principales)
 - [Instalación](#instalación)
 - [Ejecución](#ejecución)
 - [Proveedores de LLM soportados](#proveedores-de-llm-soportados)
+- [Anotaciones extra (ejecución sencilla)](#anotaciones-extra-ejecución-sencilla)
+- [Ejemplos rápidos](#ejemplos-rápidos-para-un-cliente-como-postman-o-swagger)
+
+### Funcionalidades
+- [Características principales](#características-principales)
+- [Endpoints principales](#endpoints-principales)
+- [Uso del agente vía WebSocket](#uso-del-agente-vía-websocket)
+- [Responder sobre un PDF](#responder-sobre-un-pdf-subida-y-consultas-con-memoria)
+- [Instrucciones ejemplo para agente de calendario](#instrucciones-ejemplo-para-agente-de-calendario)
+
+### Diseño y arquitectura
 - [Persistencia](#persistencia)
 - [Herramientas externas y extensibilidad](#herramientas-externas-y-extensibilidad)
-- [Endpoints principales](#endpoints-principales)
-- [Pruebas](#pruebas)
-- [Notas y anotaciones extra (ejecución sencilla)](#notas-y-anotaciones-extra-ejecución-sencilla)
-- [Estructura del proyecto](#estructura-del-proyecto)
 - [Arquitectura del Agente Conversacional](#arquitectura-del-agente-conversacional)
-- [Responder sobre un PDF (subida y consultas con memoria)](#responder-sobre-un-pdf-subida-y-consultas-con-memoria)
-- [Instrucciones ejemplo para agente de calendario](#instrucciones-ejemplo-para-agente-de-calendario)
-- [Extensión por herramientas externas (plugins)](#extensión-por-herramientas-externas-plugins)
-- [Ejemplos rápidos (para un cliente como postman, swagger o cualquiera)](#ejemplos-rápidos-para-un-cliente-como-postman-swagger-o-cualquiera)
-- [Usuarios y contraseñas para la obtención de tokens](#usuarios-y-contraseñas-de-ejemplo)
+- [Estructura del proyecto](#estructura-del-proyecto)
+
+### Calidad y evaluación
+- [Pruebas](#pruebas)
+- [Parte teórica](#parte-teórica)
+- [Usuarios y contraseñas de ejemplo](#usuarios-y-contraseñas-de-ejemplo)
+
+---
+
+
+## Parte teórica
+
+Las respuestas a la **parte teórica solicitada en la prueba técnica** se encuentran en el archivo **`RESPUESTAS_TECNICAS.md`**, incluido en este repositorio.
+
+---
 
 ## Guía paso a paso
 
@@ -30,58 +65,65 @@ Sigue en orden las secciones **Instalación** y **Ejecución**. Al final, abre l
 - http://localhost:8000/docs
 
 ### 2) Probar la aplicación en Render
-Si prefieres probar directamente en el entorno desplegado, usa la documentación interactiva aquí:
 
 - https://agente-conversacional-calendario-pdf.onrender.com/docs
 
-NOTA: Es probable que las primeras peticiones fallen o tarden debido al servidio de Render.com, que activa el servidor al recibir las peticiones. Y al ser memoria interna del sistema, cada vez que se apaga el servidor, se borran todos los datos de la memoria (es persistente solo mientras se usa)
+**Nota:** el servicio se activa bajo demanda. Las primeras peticiones pueden tardar unos segundos y, al utilizar almacenamiento en memoria, los datos se pierden al reiniciar el servidor.
 
 ### 3) Probar funcionalidades
-Puedes usar los ejemplos de la sección **[Ejemplos rápidos](#ejemplos-rápidos-para-un-cliente-como-postman-swagger-o-cualquiera)** o las rutas descritas en **[Endpoints principales](#endpoints-principales)** y **Responder sobre un PDF (subida y consultas con memoria)**.
+Puedes usar los ejemplos de la sección **Ejemplos rápidos** o las rutas descritas en **Endpoints principales**.
+
+---
 
 ## Características principales
 
-- **Autenticación de usuarios** (simulada con almacén local)
-- **Gestión de múltiples conversaciones**: cada una con su propio contexto y memoria
-- **Almacenamiento en memoria** para usuarios, eventos y conversaciones
-- **Integración de herramientas externas** (ejemplo: calendario, análisis de PDF)
-- **Extensible mediante registro de plugins** para nuevas herramientas
-- **Pruebas unitarias y de integración** incluidas (solo pruebas básicas)
+- Autenticación de usuarios (simulada con almacén local)
+- Gestión de múltiples conversaciones con contexto independiente
+- Almacenamiento en memoria para usuarios, eventos y documentos
+- Integración de herramientas externas (calendario, PDFs)
+- Arquitectura extensible mediante plugins
+- Pruebas unitarias y de integración incluidas
+
+---
 
 ## Instalación
 
 1. Clona el repositorio:
-  ```sh
-  git clone https://github.com/aalexlpez/agente-conversacional-calendario-pdf.git
-  cd agente-conversacional
-  ```
+```sh
+git clone https://github.com/aalexlpez/agente-conversacional-calendario-pdf.git
+cd agente-conversacional
+```
 2. Crea y activa un entorno virtual:
-  ```sh
-  python -m venv venv
-  # En Windows
-  venv\Scripts\activate
-  # En Unix/Mac
-  source venv/bin/activate
-  ```
+```sh
+python -m venv venv
+# En Windows
+venv\Scripts\activate
+# En Unix/Mac
+source venv/bin/activate
+```
 3. Instala las dependencias:
-  ```sh
-  python -m pip install -r requirements.txt
-  ```
+```sh
+python -m pip install -r requirements.txt
+```
 4. Copia el archivo `.env.example` a `.env` y configura las variables necesarias (por ejemplo, API_BASE_URL, JWT_SECRET_KEY, etc.).
+
+---
 
 ## Ejecución
 
-1. Inicia el servidor FastAPI con Uvicorn:
-  ```sh
-  uvicorn src.api.main:app --reload
-  ```
-2. Accede a la documentación interactiva (swagger) en [http://localhost:8000/docs](http://localhost:8000/docs)
+```sh
+uvicorn src.api.main:app --reload
+```
+
+Accede a Swagger en `http://localhost:8000/docs`.
+
+---
 
 ## Proveedores de LLM soportados
 
 El agente soporta múltiples proveedores de modelos de lenguaje (LLM) para la comprensión y generación de texto. Puedes alternar entre proveedores configurando la variable `LLM_PROVIDER` en tu archivo `.env`.
 
-- **APIFreeLLM** (modelo limitado. No me ha funcionado muy bien)
+- **APIFreeLLM** (modelo limitado; incluido como alternativa de prueba)
 - **Groq** (recomendado, por ejemplo: `llama-3.1-8b-instant` y posee varios LLM para hacer test)
 
 Ejemplo de configuración para Groq:
@@ -100,6 +142,7 @@ APIFREELLM_MODEL=apifreellm
 
 **Nota:** Si no se configura correctamente la API key o el modelo, el agente mostrará un error al intentar generar respuestas.
 
+---
 
 ## Persistencia
 
@@ -126,6 +169,8 @@ Actualmente, **toda la información del agente (usuarios, eventos, conversacione
 - Abstracción y lógica de almacenamiento: `src/infrastructure/memory_store.py`
 - Uso en la aplicación: ver inyección de dependencias y casos de uso en `src/application/` y `src/api/`
 
+---
+
 ## Herramientas externas y extensibilidad
 
 El registro de herramientas (`ToolRegistry`) permite agregar nuevas integraciones sin modificar el núcleo. Todas las herramientas deben heredar de la clase abstracta `BaseTool` y registrarse en el `ToolRegistry`.
@@ -145,6 +190,8 @@ _tool_registry = ToolRegistry()
 _tool_registry.register(WeatherTool())
 ```
 
+---
+
 ## Endpoints principales
 
 ### Calendario
@@ -158,6 +205,41 @@ _tool_registry.register(WeatherTool())
 - **GET /documents**: Lista documentos, opcionalmente filtrados por conversación.
 - **POST /documents/query**: Busca palabras clave en el contenido de un PDF.
 
+---
+
+## Uso del agente vía WebSocket
+
+El agente permite **streaming de respuestas y concurrencia** mediante WebSocket, permitiendo que el usuario cambie de conversación mientras se procesa otra.
+
+### URL de conexión
+
+```text
+ws://localhost:8000/ws/chat/{CONVERSATION_ID}?token={TOKEN}
+```
+
+En producción (por ejemplo, usando Postman u otro cliente WebSocket): 
+
+```text
+wss://agente-conversacional-calendario-pdf.onrender.com/ws/chat/{CONVERSATION_ID}?token={TOKEN}
+
+con este formato para enviarle mensaje:
+
+{
+    "text": "Mensaje al LLM"
+}
+```
+
+### Flujo típico
+
+1. Autenticarse y obtener un token JWT.
+2. Crear una conversación (`conversation_id`).
+3. Conectarse al WebSocket usando el `conversation_id` y el token.
+4. Enviar mensajes de texto; el agente responderá de forma progresiva.
+5. El sistema notifica cuando la respuesta ha finalizado.
+
+Este enfoque permite manejar múltiples conversaciones simultáneas sin bloquear el hilo principal.
+
+---
 
 ## Pruebas
 
@@ -184,6 +266,7 @@ Puedes ejecutar un archivo de test específico, por ejemplo:
 ```sh
 python -m pytest tests/test_api_use_cases_documents.py
 ```
+
 ### Cobertura
 
 Las pruebas cubren:
@@ -192,6 +275,10 @@ Las pruebas cubren:
 - Subida, extracción y consulta de PDFs.
 - Integración con el LLM y herramientas externas.
 - Notificaciones y eventos de calendario.
+
+En un flujo de CI/CD, las pruebas unitarias e integración se ejecutarían en cada pull request, mientras que las pruebas end-to-end se reservarían para entornos previos a producción.
+
+---
 
 ## Anotaciones extra (ejecución sencilla)
 
@@ -202,6 +289,8 @@ Las pruebas cubren:
 - **WebSocket:** conecta a `ws://localhost:8000/ws/chat/{conversation_id}?token=<TOKEN>` para chat en tiempo real.
 - **Swagger:** `http://localhost:8000/docs` para explorar endpoints y probarlos.
 
+---
+
 ## Estructura del proyecto
 
 - `src/domain/`: Entidades y contratos de dominio (modelos, interfaces, abstracciones)
@@ -210,9 +299,11 @@ Las pruebas cubren:
 - `src/api/`: Endpoints y controladores FastAPI
 - `tests/`: Pruebas unitarias y de integración
 
+---
+
 ## Arquitectura del Agente Conversacional
 
-Este documento describe la arquitectura general del proyecto, incluyendo un diagrama visual (ASCII) y diagramas Mermaid para comprender la solución y sus conexiones.
+La arquitectura sigue una separación clara por capas (API, Application, Domain, Infrastructure), favoreciendo mantenibilidad, testabilidad y extensibilidad.
 
 ### Diagrama Visual (ASCII) — Capas y Conexiones
 
@@ -260,8 +351,10 @@ Este documento describe la arquitectura general del proyecto, incluyendo un diag
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 
+---
 
 ## Responder sobre un PDF (subida y consultas con memoria)
+
 El agente permite responder preguntas y realizar búsquedas sobre el contenido de documentos PDF subidos por el usuario. Esta funcionalidad es clave para escenarios donde se necesita extraer información específica, buscar palabras clave o responder consultas contextuales basadas en documentos.
 
 ### ¿Cómo funciona?
@@ -312,15 +405,18 @@ El agente permite responder preguntas y realizar búsquedas sobre el contenido d
 - Herramienta de extracción y búsqueda: `src/tools/pdf_tool.py`
 - Memoria del agente: `src/infrastructure/memory_store.py`
 
+---
+
 ## Instrucciones ejemplo para agente de calendario
 
- <p align="center">
+<p align="center">
   <b>-----------------------------¡¡¡NOTA IMPORTANTE!!!-----------------------------</b>
 </p>
 
+> Nota: la integración con Google Calendar utiliza credenciales de desarrollo y no representa un flujo OAuth multiusuario completo. En un entorno productivo, cada usuario debería autorizar su propia cuenta.
+> 
+> Se incluyen dos imágenes en la raíz del proyecto a modo ilustrativo de interacciones reales con el calendario.
 
-> Los endpoints de eventos <b>puede que no funcionen o no lo vean en tiempo real</b>, ya que actualmente la integración con Google Calendar utiliza mi acceso personal de Google Cloud Platform. En un entorno real, cada usuario debería autenticar su propia cuenta de Google y autorizar el acceso a su calendario personal para gestionar sus eventos de forma independiente. 
-> He dejado dos imagenes en la ruta raíz para apreciar interacciones que he tenido en mi google calendar. En la imagen 1, van a ver una interacción con el LLM a través de postman con websocket para organizar reuniones. En la imagen 2, van a ver mi google calendar con los eventos organizados.
 
 <b>Agregar evento:</b>
 
@@ -331,7 +427,7 @@ Ejemplo: "Agrega un evento llamado Reunión el 28 de enero a las 10 am."
 
 "Muéstrame los eventos del [fecha]."
 "¿Qué eventos tengo el [fecha]?"
-Ejemplo: "Lista los eventos del 30 de enero." (En este caso he conseguido algunos bugs)
+Ejemplo: "Lista los eventos del 30 de enero." (Este flujo presenta algunos comportamientos no deseados)
 
 <b>Editar evento:</b>
 
@@ -345,43 +441,11 @@ Ejemplo: "Cambia el evento del 28 de enero a las 12 pm al 29 de enero a las 10 a
 Ejemplo: "Elimina el evento Reunión del 28 de enero."
 Ejemplo: "Borra el evento del 30 de enero."
 
-## Extensión por herramientas externas (plugins)
+---
 
-El agente está diseñado para ser extensible con nuevas herramientas externas (por ejemplo, APIs, servicios, utilidades) sin modificar el núcleo del sistema. Esto se logra mediante un patrón de registro de plugins:
+## Ejemplos rápidos (para un cliente como Postman o Swagger)
 
-### ¿Cómo funciona?
-- **Interfaz común:** Todas las herramientas deben heredar de la clase abstracta `BaseTool` (ver `src/tools/base.py`).
-- **Registro dinámico:** Las herramientas se registran en el `ToolRegistry`, que permite al agente descubrirlas y utilizarlas sin acoplamiento directo.
-- **Desacoplamiento:** El núcleo del agente (gestión de conversaciones, LLM, etc.) interactúa solo con el `ToolRegistry`, nunca con implementaciones concretas.
-
-### Pasos para agregar una nueva herramienta
-1. **Crear una clase que herede de `BaseTool`:**
-
-    ```python
-    from src.tools.base import BaseTool
-
-    class WeatherTool(BaseTool):
-        name = "weather"
-        async def execute(self, query: str) -> str:
-            # Lógica para consultar el clima
-            return "Soleado"
-    ```
-
-2. **Registrar la herramienta en el `ToolRegistry`:**
-
-    ```python
-    from src.tools.base import ToolRegistry
-    from src.tools.weather_tool import WeatherTool
-
-    _tool_registry = ToolRegistry()
-    _tool_registry.register(WeatherTool())
-    ```
-
-3. **El agente ya podrá usar la nueva herramienta sin cambios adicionales en el núcleo.**
-
-> **Resumen:** Para incorporar nuevas herramientas, solo implementa la interfaz `BaseTool` y regístrala en el `ToolRegistry`. El núcleo del agente permanece inalterado.
-
-## Ejemplos rápidos (para un cliente como postman, swagger o cualquiera)
+Los siguientes ejemplos representan flujos mínimos de validación funcional.
 
 ### 1) Login y token (curl)
 ```sh
@@ -422,6 +486,8 @@ curl -X POST http://localhost:8000/events \
   -d '{"title":"Reunión","starts_at":"2026-01-25T10:00:00Z","ends_at":"2026-01-25T11:00:00Z"}'
 ```
 
+---
+
 ## Usuarios y contraseñas de ejemplo
 
 La autenticación está basada en un almacén local en memoria. Puedes iniciar sesión con cualquiera de los siguientes usuarios y contraseñas por defecto:
@@ -441,3 +507,4 @@ La autenticación está basada en un almacén local en memoria. Puedes iniciar s
 | user10   | pass10     |
 
 Puedes modificar estos valores en el archivo `src/infrastructure/auth.py` si necesitas otros usuarios.
+
