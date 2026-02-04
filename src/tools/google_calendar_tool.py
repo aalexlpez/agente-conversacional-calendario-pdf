@@ -12,6 +12,7 @@ from typing import Optional
 import os
 
 from google.oauth2.credentials import Credentials
+from google.auth.transport.requests import Request
 from google.oauth2.service_account import Credentials as ServiceAccountCredentials
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
@@ -57,6 +58,7 @@ class GoogleCalendarTool(BaseTool):
 				client_secret=client_secret,
 				scopes=self._scopes,
 			)
+			self._is_user_oauth = True
 			logger.info("google_calendar_tool: usando OAuth de usuario", calendar_id=self._calendar_id)
 		else:
 			if not credentials_path:
@@ -65,8 +67,11 @@ class GoogleCalendarTool(BaseTool):
 				credentials_path,
 				scopes=self._scopes,
 			)
+			self._is_user_oauth = False
 			logger.info("google_calendar_tool: usando service account", calendar_id=self._calendar_id)
-		self._service = build("calendar", "v3", credentials=credentials, cache_discovery=False)
+		self._credentials = credentials
+		self._ensure_credentials_valid()
+		self._service = build("calendar", "v3", credentials=self._credentials, cache_discovery=False)
 
 	def create_event(
 		self,
@@ -78,6 +83,7 @@ class GoogleCalendarTool(BaseTool):
 		metadata: Optional[dict[str, str]] = None,
 	) -> Event:
 		"""Inserta un evento en el calendario y devuelve el resultado en forma de Event."""
+		self._ensure_credentials_valid()
 		body = {
 			"summary": title,
 			"start": self._build_datetime(starts_at),
@@ -113,6 +119,7 @@ class GoogleCalendarTool(BaseTool):
 		ends_at: Optional[datetime] = None,
 	) -> Optional[Event]:
 		"""Actualiza los campos proporcionados de un evento existente."""
+		self._ensure_credentials_valid()
 		payload: dict[str, object] = {}
 		if title is not None:
 			payload["summary"] = title
@@ -145,6 +152,7 @@ class GoogleCalendarTool(BaseTool):
 
 	def delete_event(self, event_id: str) -> bool:
 		"""Elimina un evento y devuelve True si se borró correctamente."""
+		self._ensure_credentials_valid()
 		try:
 			self._service.events().delete(
 				calendarId=self._calendar_id,
@@ -158,6 +166,7 @@ class GoogleCalendarTool(BaseTool):
 
 	def list_events(self, user_id: str) -> list[Event]:
 		"""Lista eventos del calendario ordenados por hora de inicio."""
+		self._ensure_credentials_valid()
 		try:
 			result = self._service.events().list(
 				calendarId=self._calendar_id,
@@ -182,6 +191,7 @@ class GoogleCalendarTool(BaseTool):
 
 	def get_event(self, *, event_id: str, user_id: str) -> Optional[Event]:
 		"""Obtiene un evento por ID o devuelve None si no existe."""
+		self._ensure_credentials_valid()
 		try:
 			item = self._service.events().get(
 				calendarId=self._calendar_id,
@@ -221,6 +231,20 @@ class GoogleCalendarTool(BaseTool):
 			return datetime.fromisoformat(value.replace("Z", "+00:00"))
 		except ValueError:
 			return datetime.now(tz=timezone.utc)
+
+	def _ensure_credentials_valid(self) -> None:
+		"""Refresca el access token si caducó (OAuth de usuario)."""
+		if not getattr(self, "_is_user_oauth", False):
+			return
+		if self._credentials is None:
+			return
+		if self._credentials.valid:
+			return
+		if self._credentials.expired and self._credentials.refresh_token:
+			logger.info("google_calendar_tool: access token expirado, refrescando")
+			self._credentials.refresh(Request())
+			return
+		raise RuntimeError("El refresh token no es válido o no existe.")
 
 	async def execute(self, query: str) -> str:
 		"""Interface textual mínima; se recomienda usar los métodos específicos."""
