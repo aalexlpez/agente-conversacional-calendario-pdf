@@ -27,7 +27,7 @@ logger = structlog.get_logger()
 @dataclass
 class UseCaseConfig:
 	"""Configuración opcional de parámetros compartidos entre casos de uso."""
-	max_history_messages: int = 10
+	max_history_messages: int = 50
 	notify_on_complete: bool = True
 
 
