@@ -12,6 +12,7 @@ from typing import Optional
 import os
 
 from google.oauth2.credentials import Credentials
+from google.auth.exceptions import RefreshError
 from google.auth.transport.requests import Request
 from google.oauth2.service_account import Credentials as ServiceAccountCredentials
 from googleapiclient.discovery import build
@@ -242,8 +243,14 @@ class GoogleCalendarTool(BaseTool):
 			return
 		if self._credentials.expired and self._credentials.refresh_token:
 			logger.info("google_calendar_tool: access token expirado, refrescando")
-			self._credentials.refresh(Request())
-			return
+			try:
+				self._credentials.refresh(Request())
+				return
+			except RefreshError as exc:
+				logger.error("google_calendar_tool: refresh token inválido o revocado", error=str(exc))
+				raise RuntimeError(
+					"Refresh token inválido o revocado. Reautoriza la cuenta para obtener uno nuevo."
+				) from exc
 		raise RuntimeError("El refresh token no es válido o no existe.")
 
 	async def execute(self, query: str) -> str:
