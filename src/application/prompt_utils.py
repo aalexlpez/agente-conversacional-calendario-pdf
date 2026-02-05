@@ -174,8 +174,8 @@ def build_document_query_prompt(
 	if len(cleaned) > max_chars:
 		cleaned = cleaned[:max_chars] + "..."
 	return (
-		"Responde la pregunta usando únicamente el contenido del documento. "
-		"Si la información no está en el documento, responde: "
+		"Responde la pregunta usando únicamente el contenido del documento. Analiza el contexto del documento para dar respuesta"
+		"Si no consigues información para responder la pregunta, entonces responde: "
 		"'No se encontró información en el documento.'\n\n"
 		f"Documento: {filename}\n"
 		f"Contenido:\n{cleaned}\n\n"
